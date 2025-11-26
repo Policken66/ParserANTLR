@@ -1,0 +1,10 @@
+COUT=1
+END=2
+OUT_OP=3
+ID=4
+STR=5
+NUM=6
+WS=7
+'cout'=1
+';'=2
+'<<'=3
