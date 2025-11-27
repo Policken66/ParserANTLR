@@ -19,12 +19,16 @@ class MainWindow(Ui_MainWindow, QMainWindow):
 
     def action_start_triggered(self):
         text = self.plainTextEdit_input.toPlainText()
-        success, result, output = parse_with_all_errors(text)
         output_str = ""
-        if success:
-            output_str = f"✓ УСПЕХ: {output}"
-        else:
-            output_str = f"✗ ОШИБКИ: {result}"
+        if self.comboBox_parser_name.currentText() == "Парсер ANTLR":
+            success, result, output = parse_with_all_errors(text)
+            if success:
+                output_str = f"✓ УСПЕХ: {output}"
+            else:
+                output_str = f"✗ ОШИБКИ: {result}"
+
+        if self.comboBox_parser_name.currentText() == "Мой парсер":
+            output_str = "мой парсер"
 
         self.plainTextEdit_log.setPlainText(output_str)
 
