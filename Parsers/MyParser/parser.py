@@ -1,76 +1,46 @@
-from Parsers.MyParser.token import TokenType
-from Parsers.MyParser.error_collector import ErrorCollector
-
+from Parsers.MyParser.lexer import Token
 
 class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
         self.pos = 0
-        self.current = tokens[0]
-        self.error_collector = ErrorCollector()
+        self.errors = []
 
-    def advance(self):
-        self.pos += 1
-        if self.pos < len(self.tokens):
-            self.current = self.tokens[self.pos]
+    def current(self):
+        if self.pos >= len(self.tokens):
+            return self.tokens[-1]  # EOF
+        return self.tokens[self.pos]
+
+    def add_error(self, message):
+        tok = self.current()
+        self.errors.append((tok.line, tok.column, message))
+
+    def eat(self, token_type):
+        tok = self.current()
+        if tok.type == token_type:
+            self.pos += 1
         else:
-            self.current = self.tokens[-1]  # EOF fallback
-
-    def error(self, msg):
-        self.error_collector.add_error(
-            msg, f"{self.current.line}:{self.current.col}"
-        )
+            self.add_error(f"Ожидался {token_type}, получил {tok.type}")
+            self.pos += 1  # recovery
 
     def parse(self):
-        self.parse_S()
+        self.output()
+        self.eat("SEMICOLON")
+        return self.errors
 
-        # добавляем ошибки ЛЕКСЕРА
-        lexer_errors = [
-            f"Ошибка {err}" for err in getattr(self.tokens, "lexer_errors", [])
-        ]
+    def output(self):
+        self.eat("COUT")
+        self.eat("SHIFT")
+        self.item()
 
-        self.error_collector.extend_errors(lexer_errors)
+        while self.current().type != "EOF" and self.current().type == "SHIFT":
+            self.eat("SHIFT")
+            self.item()
 
-        errors = self.error_collector.to_string()
-
-        if errors.strip() == "":
-            return True, ""
-        return False, errors
-
-    # ------------------- GRAMMAR -------------------
-    # S : output ;
-    def parse_S(self):
-        self.parse_output()
-
-    # output : item* ;
-    def parse_output(self):
-        while self.current.type != TokenType.EOF:
-            self.parse_item()
-
-    # item : IDENTIFIER | NUMBER | STRING | '(' item ')' | error
-    def parse_item(self):
-
-        # корректные атомы
-        if self.current.type in (TokenType.IDENTIFIER, TokenType.NUMBER, TokenType.STRING):
-            self.advance()
-            return
-
-        # ( item )
-        if self.current.type == TokenType.LPAREN:
-            self.advance()
-            self.parse_item()
-            if self.current.type == TokenType.RPAREN:
-                self.advance()
-            else:
-                self.error(f"ожидалась ')', найдено '{self.current.text}'")
-            return
-
-        # Ошибка
-        if self.current.type == TokenType.ERROR:
-            self.error(f"некорректный токен '{self.current.text}'")
-            self.advance()
-            return
-
-        # Всё остальное — ошибка синтаксиса
-        self.error(f"mismatched input '{self.current.text}'")
-        self.advance()
+    def item(self):
+        tok = self.current()
+        if tok.type in ("ID", "STR", "NUM"):
+            self.eat(tok.type)
+        else:
+            self.add_error(f"Expected ID, STR or NUM, got {tok.type}")
+            self.pos += 1  # recovery
