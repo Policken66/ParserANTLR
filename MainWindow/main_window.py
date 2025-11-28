@@ -48,7 +48,7 @@ class MainWindow(Ui_MainWindow, QMainWindow):
                 output_lines = []
                 for line, col, msg in errors:
                     output_lines.append(f"{line}:{col} — {msg}")
-                output_str = "\n".join(output_lines)
+                output_str = f"✗ ОШИБКИ: \n" + "\n".join(output_lines)
 
         self.plainTextEdit_log.setPlainText(output_str)
 
