@@ -46,7 +46,7 @@ class Lexer:
         while True:
             ch = self.peek()
             if ch is None:  # EOF
-                self.errors.append((start_line, start_col, "Unterminated string literal"))
+                self.errors.append((start_line, start_col, "Незавершенный строковый литерал"))
                 return Token("STR", value, start_line, start_col)
 
             if ch == '"':
@@ -75,7 +75,7 @@ class Lexer:
 
         # Только латиница + цифры + _
         if not re.match(r'[a-zA-Z_]', self.peek()):
-            self.errors.append((start_line, start_col, f"Invalid identifier start '{self.peek()}'"))
+            self.errors.append((start_line, start_col, f"Недопустимый идентификатор '{self.peek()}'"))
             invalid_tok = Token("INVALID_ID", self.peek(), start_line, start_col)
             self.advance()  # recovery
             return invalid_tok
@@ -114,7 +114,7 @@ class Lexer:
 
             # SHIFT <<
             if ch == '<' and self.pos + 1 < len(self.text) and self.text[self.pos + 1] == '<':
-                tokens.append(Token("SHIFT", "<<", self.line, self.column))
+                tokens.append(Token("OPERATOR", "<<", self.line, self.column))
                 self.advance()
                 self.advance()
                 continue
@@ -126,7 +126,7 @@ class Lexer:
                 continue
 
             # ❗ Неизвестный символ
-            self.errors.append((self.line, self.column, f"Unknown symbol '{ch}'"))
+            self.errors.append((self.line, self.column, f"Неизвестный символ '{ch}'"))
             self.advance()
             continue
 
