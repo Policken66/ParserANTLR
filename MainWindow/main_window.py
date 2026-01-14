@@ -3,6 +3,7 @@ from PySide6.QtWidgets import QMainWindow, QMessageBox
 from Parsers.MyParser.lexer import Lexer
 from Parsers.MyParser.parser import Parser
 from Parsers.ParserANTLR.advanced_cout_parser import parse_with_all_errors
+from Parsers.ParserPL import advanced_pl_parser
 from UI.MainWindow import Ui_MainWindow
 
 
@@ -21,6 +22,7 @@ class MainWindow(Ui_MainWindow, QMainWindow):
         self.action_correction.triggered.connect(self.action_correction_triggered)
         self.comboBox_parser_name.addItem("Мой парсер")
         self.comboBox_parser_name.addItem("Парсер ANTLR")
+        self.comboBox_parser_name.addItem("ANTLER PL")
 
     def action_correction_triggered(self):
         self.plainTextEdit_input.clear()
@@ -49,6 +51,13 @@ class MainWindow(Ui_MainWindow, QMainWindow):
                 for line, col, msg in errors:
                     output_lines.append(f"{line}:{col} — {msg}")
                 output_str = f"✗ ОШИБКИ: \n" + "\n".join(output_lines)
+
+        if self.comboBox_parser_name.currentText() == "ANTLER PL":
+            success, result, output = advanced_pl_parser.parse_with_all_errors(text)
+            if success:
+                output_str = f"✓ УСПЕХ: {output}"
+            else:
+                output_str = f"✗ ОШИБКИ: {result}"
 
         self.plainTextEdit_log.setPlainText(output_str)
 
