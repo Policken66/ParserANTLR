@@ -6,9 +6,6 @@ from Parsers.ParserPL.PLVisitor import PLVisitor
 
 
 class PLMultiErrorListener(ErrorListener):
-    """
-    Собирает все синтаксические ошибки.
-    """
     def __init__(self):
         self.errors = []
 
@@ -20,117 +17,79 @@ class PLMultiErrorListener(ErrorListener):
             'offendingSymbol': offendingSymbol
         })
 
-    def get_errors(self):
-        return self.errors
-
     def has_errors(self):
         return len(self.errors) > 0
+
+    def get_errors(self):
+        return self.errors
 
 
 class AdvancedPLInterpreter(PLVisitor):
     """
-    Интерпретатор подмножества PL.
-    Хранит переменные и позволяет получать их значения.
+    Интерпретатор подмножества PL (новая грамматика).
     """
     def __init__(self):
         self.variables = {}
-        self.output = []  # можно использовать, если хотим выводить что-то
 
-    # program -> statement_list EOF
-    def visitProgram(self, ctx:PLParser.ProgramContext):
+    # program : (statement ';')* EOF ;
+    def visitProgram(self, ctx: PLParser.ProgramContext):
         return self.visitChildren(ctx)
 
-    # statement_list -> statement ';' statement_list | ε
-    def visitStatement_list(self, ctx:PLParser.Statement_listContext):
-        return self.visitChildren(ctx)
-
-    # statement -> var_decl | expr
-    def visitStatement(self, ctx:PLParser.StatementContext):
+    # statement : var_decl | expr ;
+    def visitStatement(self, ctx: PLParser.StatementContext):
         if ctx.var_decl():
             return self.visit(ctx.var_decl())
-        elif ctx.expr():
-            return self.visit(ctx.expr())
-        return None
+        return self.visit(ctx.expr())
 
-    # var_decl -> 'var' ID var_decl_tail
-    def visitVar_decl(self, ctx:PLParser.Var_declContext):
-        var_name = ctx.ID().getText()
-        tail_ctx = ctx.var_decl_tail()
-        if tail_ctx.expr():
-            value = self.visit(tail_ctx.expr())
-            self.variables[var_name] = value
+    # var_decl : 'var' ID ( '=' expr | (',' ID)* ) ;
+    def visitVar_decl(self, ctx: PLParser.Var_declContext):
+        first_id = ctx.ID(0).getText()
+
+        # вариант: var x = expr
+        if ctx.expr():
+            value = self.visit(ctx.expr())
+            self.variables[first_id] = value
+
+        # вариант: var x, y, z
         else:
-            # если просто список идентификаторов
-            self.variables[var_name] = None
-        return var_name
+            for id_token in ctx.ID():
+                self.variables[id_token.getText()] = None
 
-    # var_decl_tail -> '=' expr | id_list_tail
-    def visitVar_decl_tail(self, ctx:PLParser.Var_decl_tailContext):
-        if ctx.expr():
-            return self.visit(ctx.expr())
-        elif ctx.id_list_tail():
-            return self.visit(ctx.id_list_tail())
         return None
 
-    # id_list_tail -> ',' ID id_list_tail | ε
-    def visitId_list_tail(self, ctx:PLParser.Id_list_tailContext):
-        ids = []
+    # expr :
+    #   ID ('(' arg_list ')')?
+    # | NUMBER
+    # | STRING
+    def visitExpr(self, ctx: PLParser.ExprContext):
         if ctx.ID():
-            ids.append(ctx.ID().getText())
-        if ctx.id_list_tail():
-            ids.extend(self.visit(ctx.id_list_tail()))
-        return ids
-
-    # expr -> call | ID | NUMBER | STRING
-    def visitExpr(self, ctx:PLParser.ExprContext):
-        if ctx.call():
-            return self.visit(ctx.call())
-        elif ctx.ID():
             name = ctx.ID().getText()
+
+            # вызов функции
+            if ctx.arg_list():
+                args = self.visit(ctx.arg_list())
+                return f"{name}({', '.join(map(str, args))})"
+
+            # просто идентификатор
             return self.variables.get(name, f"<{name}>")
-        elif ctx.NUMBER():
-            return int(ctx.NUMBER().getText())
-        elif ctx.STRING():
+
+        if ctx.NUMBER():
+            return float(ctx.NUMBER().getText()) if '.' in ctx.NUMBER().getText() else int(ctx.NUMBER().getText())
+
+        if ctx.STRING():
             return ctx.STRING().getText()[1:-1]
+
         return None
 
-    # call -> ID '(' arg_list ')'
-    def visitCall(self, ctx:PLParser.CallContext):
-        func_name = ctx.ID().getText()
-        args = []
-        if ctx.arg_list() and ctx.arg_list().expr():
-            args.append(self.visit(ctx.arg_list().expr()))
-        # можно здесь расширять вызовы функций
-        return f"{func_name}({', '.join(map(str, args))})"
-
-    # arg_list -> expr arg_list_tail | ε
-    def visitArg_list(self, ctx:PLParser.Arg_listContext):
-        args = []
-        if ctx.expr():
-            args.append(self.visit(ctx.expr()))
-        if ctx.arg_list_tail():
-            args.extend(self.visit(ctx.arg_list_tail()))
-        return args
-
-    # arg_list_tail -> ',' expr arg_list_tail | ε
-    def visitArg_list_tail(self, ctx:PLParser.Arg_list_tailContext):
-        args = []
-        if ctx.expr():
-            args.append(self.visit(ctx.expr()))
-        if ctx.arg_list_tail():
-            args.extend(self.visit(ctx.arg_list_tail()))
-        return args
+    # arg_list : expr (',' expr)* ;
+    def visitArg_list(self, ctx: PLParser.Arg_listContext):
+        return [self.visit(expr) for expr in ctx.expr()]
 
 
 def parse_with_all_errors(code):
-    """
-    Парсит код на подмножестве PL и возвращает:
-        success (bool), message / result, variables (dict)
-    """
     input_stream = InputStream(code)
     lexer = PLLexer(input_stream)
 
-    # Обработчик ошибок
     error_listener = PLMultiErrorListener()
     lexer.removeErrorListeners()
     lexer.addErrorListener(error_listener)
@@ -143,16 +102,18 @@ def parse_with_all_errors(code):
 
     try:
         tree = parser.program()
+
         if error_listener.has_errors():
-            errors_text = "\n".join([
-                f"Ошибка {i + 1} на позиции {err['line']}:{err['column']} - {err['msg']}"
-                for i, err in enumerate(error_listener.get_errors())
-            ])
-            raise Exception(f"Найдены ошибки:\n{errors_text}")
+            errors_text = "\n".join(
+                f"Ошибка {i + 1} на позиции {e['line']}:{e['column']} — {e['msg']}"
+                for i, e in enumerate(error_listener.get_errors())
+            )
+            raise Exception(errors_text)
 
         interpreter = AdvancedPLInterpreter()
         interpreter.visit(tree)
-        return True, "Парсинг успешно завершен", interpreter.variables
+
+        return True, "Парсинг успешно завершён", interpreter.variables
 
     except Exception as e:
         return False, str(e), None

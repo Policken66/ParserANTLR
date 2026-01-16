@@ -33,9 +33,9 @@ class MainWindow(Ui_MainWindow, QMainWindow):
         if self.comboBox_parser_name.currentText() == "Парсер ANTLR":
             success, result, output = parse_with_all_errors(text)
             if success:
-                output_str = f"✓ УСПЕХ: {output}"
+                output_str = f"✓ УСПЕХ: \n {output}"
             else:
-                output_str = f"✗ ОШИБКИ: {result}"
+                output_str = f"✗ ОШИБКИ: \n {result}"
 
         if self.comboBox_parser_name.currentText() == "Мой парсер":
             lexer = Lexer(text)
@@ -55,9 +55,9 @@ class MainWindow(Ui_MainWindow, QMainWindow):
         if self.comboBox_parser_name.currentText() == "ANTLER PL":
             success, result, output = advanced_pl_parser.parse_with_all_errors(text)
             if success:
-                output_str = f"✓ УСПЕХ: {output}"
+                output_str = f"✓ УСПЕХ: \n {output}"
             else:
-                output_str = f"✗ ОШИБКИ: {result}"
+                output_str = f"✗ ОШИБКИ: \n {result}"
 
         self.plainTextEdit_log.setPlainText(output_str)
 
