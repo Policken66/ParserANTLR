@@ -113,39 +113,9 @@ class AdvancedPLInterpreter(PLVisitor):
     # lhs : lvalue derivative_mark? (LBRACK expression RBRACK)*;
     # (у тебя lvalue уже содержит [..], но оставляем поддержку "хвоста" как в грамматике)
     def visitLhs(self, ctx: PLParser.LhsContext):
-        parts = []
-
-        # 1) базовый lvalue
-        if ctx.lvalue():
-            parts.append(self.visit(ctx.lvalue()))
-        else:
-            # на всякий случай
-            parts.append(ctx.getChild(0).getText())
-
-        # 2) производная (апострофы)
-        if ctx.derivative_mark():
-            parts[-1] = parts[-1] + ctx.derivative_mark().getText()
-
-        # 3) дополнительная индексация (если реально используется)
-        # В LhsContext expression() вернёт и выражения внутри lvalue, и хвостовые.
-        # Чтобы не "удваивать" индексы, добавляем хвост только если в дереве есть LBRACK после derivative_mark.
-        text = ctx.getText()
-        # грубо: если встречается "]['" не характерно; но проще: доверим синтаксису — хвост добавим,
-        # только когда количество LBRACK в ctx больше, чем в lvalue().
-        lval_text = ctx.lvalue().getText() if ctx.lvalue() else ""
-        if text.count('[') > lval_text.count('['):
-            # хвостовые выражения в дереве идут отдельными expression() после lvalue/derivative_mark,
-            # но ANTLR не разделяет их удобно; поэтому просто восстановим как в исходном тексте:
-            # берём кусок после lvalue(+derivative) и добавляем.
-            base = parts[-1]
-            # удалим из full-text префикс lvalue (+ derivative_mark если есть)
-            prefix = ctx.lvalue().getText()
-            if ctx.derivative_mark():
-                prefix += ctx.derivative_mark().getText()
-            suffix = text[len(prefix):]
-            parts[-1] = base + suffix
-
-        return "".join(parts)
+        # lhs теперь устроен через ID + хвосты, lvalue() в контексте больше нет.
+        # Для целей отладки/прототипа достаточно восстановить текст как есть.
+        return ctx.getText()
 
     # call_stmt : func_call SEMI;
     def visitCall_stmt(self, ctx: PLParser.Call_stmtContext):

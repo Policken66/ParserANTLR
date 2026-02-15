@@ -1,9 +1,13 @@
 grammar PL;
 
-model : (statement)* EOF;
-statement : declaration | equation | call_stmt | control_statement | routine_definition | directive | script_block | block;
+// PARSER
 
-declaration : var_decl | const_decl | input_decl | output_decl | init_decl;
+model : (statement)* EOF;
+statement : declaration | equation | call_stmt | control_statement
+          | routine_definition | directive | script_block | block;
+
+declaration : var_decl | const_decl | input_decl
+            | output_decl | init_decl;
 var_decl : VAR var_item (COMMA var_item)* SEMI;
 var_item : lvalue (COLON type_name)? (ASSIGN expression)?;
 type_name : ID;
@@ -19,8 +23,7 @@ ident_list : ident (COMMA ident)*;
 ident : ID;
 
 equation : lhs ASSIGN expression SEMI;
-lhs : lvalue derivative_mark? (LBRACK expression RBRACK)*;
-derivative : ident derivative_mark;
+lhs : ID (derivative_mark)? (LBRACK expression RBRACK)*;
 derivative_mark : QUOTE1+;
 
 expression : or_expr;
@@ -32,28 +35,32 @@ add_expr : mul_expr ((ADD | SUB) mul_expr)*;
 mul_expr : pow_expr ((MUL | DIV) pow_expr)*;
 pow_expr : unary_expr (POW pow_expr)?;
 unary_expr : (ADD | SUB | NOT_OP | BANG) unary_expr | primary;
-primary : literal | lvalue | func_call | array_literal | LPAREN expression RPAREN;
+primary : literal | lvalue | func_call
+        | array_literal | LPAREN expression RPAREN;
 func_call : ident LPAREN arg_list? RPAREN;
 arg_list : expression (COMMA expression)*;
 literal : NUMBER | STRING;
 array_literal : LBRACK expression (COMMA expression)* RBRACK;
 
-control_statement : if_stmt | while_stmt | for_stmt | repeat_stmt | switch_stmt | exit_stmt | goto_stmt | label_stmt | inline_stmt;
+control_statement : if_stmt | while_stmt | for_stmt
+                  | repeat_stmt | switch_stmt | exit_stmt
+                  | goto_stmt | label_stmt | inline_stmt;
 if_stmt : IF expression THEN stmt_or_block (ELSE stmt_or_block)?;
 stmt_or_block : equation | call_stmt | control_statement | block;
-block : BEGIN statement* END SEMI?;
+block : BEGIN statement* END SEMI;
 while_stmt : WHILE expression DO stmt_or_block;
-for_stmt : FOR ident ASSIGN expression (TO | DOWNTO) expression DO stmt_or_block | FOR LPAREN for_init COMMA expression (COMMA expression)? RPAREN stmt_or_block SEMI?;
+for_stmt : FOR ident ASSIGN expression (TO | DOWNTO) expression DO stmt_or_block
+         | FOR LPAREN for_init COMMA expression (COMMA expression)? RPAREN stmt_or_block SEMI?;
 for_init : ident ASSIGN expression;
 repeat_stmt : REPEAT stmt_or_block+ UNTIL expression SEMI;
-switch_stmt : SWITCH LPAREN expression RPAREN BEGIN switch_case+ (ELSE stmt_or_block)? END SEMI?;
-switch_case : expr_list COLON stmt_or_block SEMI?;
+switch_stmt : SWITCH LPAREN expression RPAREN BEGIN switch_case+ (ELSE stmt_or_block)? END SEMI;
+switch_case : expr_list COLON stmt_or_block SEMI;
 expr_list : expression (COMMA expression)*;
 exit_stmt : EXIT SEMI;
 goto_stmt : GOTO ident SEMI;
 label_stmt : ident COLON stmt_or_block;
 call_stmt : func_call SEMI;
-inline_stmt : INLINE SEMI ;
+inline_stmt : INLINE SEMI;
 
 routine_definition : function_def | procedure_def;
 function_def : FUNCTION ident formal_params? (COLON type_name)? routine_body END SEMI;
@@ -75,65 +82,41 @@ script_block : SECTION script_body ENDSCRIPT
 script_body : statement*;
 
 
-VAR : 'var';
-CONST : 'const';
-INPUT : 'input';
-OUTPUT : 'output';
-INIT : 'init';
-IF : 'if';
-THEN : 'then';
-ELSE : 'else';
-WHILE : 'while';
-DO : 'do';
-FOR : 'for';
-TO : 'to';
-DOWNTO : 'downto';
-REPEAT : 'repeat';
-UNTIL : 'until';
+// LEXER
+
+VAR : 'var'; CONST : 'const'; INIT : 'init';
+INPUT : 'input'; OUTPUT : 'output';
+
+IF : 'if'; THEN : 'then'; ELSE : 'else';
+WHILE : 'while'; DO : 'do';
+FOR : 'for'; TO : 'to'; DOWNTO : 'downto';
+REPEAT : 'repeat'; UNTIL : 'until';
 EXIT : 'exit';
 SWITCH : 'switch';
 GOTO : 'goto';
-OUT : 'out';
-INLINE : 'inline';
-BEGIN : 'begin';
-END : 'end';
-FUNCTION : 'function';
-PROCEDURE : 'procedure';
-DEFINE : 'define';
-INCLUDE : 'include';
-IFDEF : 'ifdef';
-IFNDEF : 'ifndef';
-UNDEFINE : 'undefine';
-ENDIF : 'endif';
+
+OUT : 'out'; INLINE : 'inline';
+BEGIN : 'begin'; END : 'end';
+FUNCTION : 'function'; PROCEDURE : 'procedure';
+DEFINE : 'define'; INCLUDE : 'include';
+IFDEF : 'ifdef'; IFNDEF : 'ifndef';
+UNDEFINE : 'undefine'; ENDIF : 'endif';
 SECTION : 'section';
 APPLYNOW : 'applynow';
 ENDSCRIPT: 'endscript';
-EQUAL : '==';
-NOTEQUAL : '!=';
-LE : '<=';
-GE : '>=';
-ASSIGN : '=';
-LT : '<';
-GT : '>';
-ADD : '+';
-SUB : '-';
-MUL : '*';
-DIV : '/';
-POW: '^';
-BANG : '!';
-QUOTE1 : '\'';
+
+EQUAL : '=='; NOTEQUAL : '!=';
+LE : '<='; GE : '>='; ASSIGN : '=';
+LT : '<'; GT : '>';
+ADD : '+'; SUB : '-'; MUL : '*'; DIV : '/';
+POW: '^'; BANG : '!'; QUOTE1 : '\'';
 OR_OP : 'or'  | 'OR'  | '||';
 AND_OP : 'and' | 'AND' | '&&';
 NOT_OP : 'not' | 'NOT';
-LPAREN : '(';
-RPAREN : ')';
-LBRACK : '[';
-RBRACK : ']';
-LBRACE : '{';
-RBRACE : '}';
-COMMA : ',';
-SEMI : ';';
-COLON : ':';
+LPAREN : '('; RPAREN : ')';
+LBRACK : '['; RBRACK : ']';
+COMMA : ','; SEMI : ';'; COLON : ':';
+
 NUMBER : DIGIT+ ('.' DIGIT+)? EXP? | '.' DIGIT+ EXP?;
 fragment EXP : [eE] [+\-]? DIGIT+ ;
 fragment DIGIT : [0-9] ;
